@@ -1,0 +1,458 @@
+<div class="ui raised segment" style="background: linear-gradient(135deg, #ffe4e6, #fff0f5); border-radius: 15px; box-shadow: 0 6px 12px rgba(255, 182, 193, 0.2); padding: 30px;" x-data="cartComponent">
+    <div class="ui grid">
+        <div class="eight wide column">
+            <h2 class="ui header" style="color: #4a2e2e; font-family: 'Playfair Display', serif;">
+                <i class="shopping cart icon" style="color: #ff6f7d;"></i>
+                <div class="content">
+                    Your Cosmetic Cart
+                    <div class="sub header" style="color: #555; font-family: 'Lora', serif;">Explore your selected beauty essentials</div>
+                </div>
+            </h2>
+        </div>
+        <div class="eight wide column" style="text-align: right;">
+            <button class="ui button" @click="toggleEditMode" x-text="editMode ? 'Done' : 'Edit'" style="background-color: #ff6f7d; color: white; border-radius: 10px; padding: 10px 20px; font-family: 'Lora', serif; transition: all 0.3s ease;"></button>
+        </div>
+    </div>
+    <div class="ui message" x-show="message" :class="messageType" style="border-radius: 10px; margin: 20px 0; background-color: #ffe6ea; color: #4a2e2e; font-family: 'Lora', serif;">
+        <i class="close icon" @click="message = ''" style="color: #ff6f7d;"></i>
+        <div x-text="message"></div>
+    </div>
+    <div class="cart-grid">
+        <template x-for="(item, index) in cartItems" :key="index">
+            <div class="cart-card" 
+                 :class="{ 'selected': selectedItems.includes(index) }" 
+                 @click="toggleItemSelection(index)">
+                <div class="cart-image">
+                    <img :src="item.product_image || 'https://via.placeholder.com/150?text=Cosmetic'" alt="Product Image" @error="console.log('Cart image failed to load for ' + item.name + ': ' + item.product_image)">
+                    <div class="out-of-stock-notice" x-show="item.stock <= 0">Out of Stock</div>
+                </div>
+                <div class="cart-details">
+                    <div class="cart-name" x-text="item.name || 'Unknown'" style="color: #c71585;"></div>
+                    <div class="cart-description" x-text="item.description || 'Luxurious cosmetic product.'" style="font-style: italic;"></div>
+                    <div class="cart-price" x-text="`Price: ₱${parseFloat(item.price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`"></div>
+                    <div class="cart-quantity">
+                        Quantity:
+                        <div class="ui action input" style="display: inline-flex; align-items: center;">
+                            <button class="ui small icon button" @click.stop="decrementQuantity(item)" :disabled="item.quantity <= 1">-</button>
+                            <span class="ui small button disabled" x-text="item.quantity || '0'"></span>
+                            <button class="ui small icon button" @click.stop="incrementQuantity(item)" :disabled="item.stock <= 0">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+        <div class="no-items" x-show="!cartItems || cartItems.length === 0" style="font-style: italic; color: #ff69b4; font-family: 'Lora', serif;">
+            Your cosmetic cart is waiting to be filled!
+        </div>
+    </div>
+    <div class="ui grid" x-show="cartItems && cartItems.length > 0">
+        <div class="sixteen wide column">
+            <div style="text-align: left; margin: 20px 0; font-family: 'Lora', serif;">
+                <strong style="color: #4a2e2e;">Total: </strong>
+                <span x-text="`₱${totalPrice}`" style="color: #ff1493; font-weight: bold;"></span>
+            </div>
+            <button class="ui button" @click="proceedToCheckout" :disabled="selectedItems.length === 0" x-show="!editMode" style="background-color: #ff6f7d; color: white; border-radius: 10px; padding: 14px 25px; font-family: 'Playfair Display', serif;">
+                <i class="check icon"></i> Proceed to Payment
+            </button>
+            <button class="ui button" @click="removeSelectedItems" :disabled="selectedItems.length === 0" x-show="editMode" style="float: right; background-color: #dc143c; color: white; border-radius: 10px; padding: 14px 25px; font-family: 'Playfair Display', serif;">
+                <i class="trash icon"></i> Remove Selected
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ui.segment {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 30px;
+        box-sizing: border-box;
+    }
+    
+    .cart-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        padding: 30px 0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .cart-card {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-start;
+        max-width: 800px;
+        min-height: 220px;
+        margin: 0 auto;
+        border: 1px solid #ffccd5;
+        border-radius: 20px;
+        background: #fff;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        cursor: pointer;
+        overflow: hidden;
+    }
+    
+    .cart-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 10px 25px rgba(255, 105, 180, 0.2);
+    }
+    
+    .cart-card.selected {
+        border: 2px solid #ff69b4;
+        background: #fff5f8;
+    }
+    
+    .cart-image {
+        position: relative;
+        width: 220px;
+        height: 170px;
+        background: #fef7f9;
+        flex-shrink: 0;
+    }
+    
+    .cart-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        padding: 10px;
+    }
+    
+    .out-of-stock-notice {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        background: transparent;
+        color: #dc143c;
+        font-size: 20px;
+        font-weight: bold;
+        padding: 8px 20px;
+        border: 3px solid #dc143c;
+        text-align: center;
+    }
+    
+    .cart-details {
+        padding: 20px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background: linear-gradient(to bottom, #fff, #fff8fb);
+    }
+    
+    .cart-name {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #c71585;
+        font-family: 'Arial', sans-serif;
+    }
+    
+    .cart-description {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-clamp: 2;
+        box-orient: vertical;
+        font-size: 14px;
+        color: #555;
+        margin-bottom: 12px;
+        font-style: italic;
+    }
+    
+    .cart-price {
+        font-size: 20px;
+        font-weight: bold;
+        color: #ff1493;
+        margin-bottom: 12px;
+    }
+    
+    .cart-quantity {
+        font-size: 15px;
+        color: #333;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .ui.action.input .ui.button {
+        border: 1px solid #ffb6c1;
+        padding: 8px;
+        font-size: 15px;
+        line-height: 1;
+        background: #ffe4e6;
+        color: #c71585;
+    }
+    
+    .ui.action.input .ui.button:hover {
+        background: #ffccd5;
+    }
+    
+    .ui.action.input .ui.button:first-child {
+        border-radius: 10px 0 0 10px;
+    }
+    
+    .ui.action.input .ui.button:last-child {
+        border-radius: 0 10px 10px 0;
+    }
+    
+    .ui.action.input .ui.button.disabled {
+        border-left: none;
+        border-right: none;
+        width: 45px;
+        text-align: center;
+        cursor: default;
+        background: #fff0f5;
+        color: #555;
+    }
+    
+    .no-items {
+        text-align: center;
+        padding: 30px;
+        color: #ff69b4;
+        font-size: 18px;
+        font-style: italic;
+    }
+    
+@media (max-width: 768px) {
+    .cart-card {
+        flex-direction: column;
+        max-width: 100%;
+        min-height: 300px;
+    }
+
+    .cart-image {
+        width: 100%;
+        height: 150px;
+    }
+}
+</style>
+
+<script>
+    if (!Alpine.store('api')) {
+        Alpine.store('api', {
+            fetch(url, options) {
+                return fetch(url, options);
+            }
+        });
+    }
+    
+    Alpine.data("cartComponent", () => ({
+        cartItems: Alpine.reactive(JSON.parse(localStorage.getItem('cart')) || []),
+        selectedItems: Alpine.reactive([]),
+        message: "",
+        messageType: "",
+        editMode: false,
+    
+        init() {
+            console.log('Cart items loaded:', this.cartItems);
+            window.addEventListener('storage', this.handleStorageChange.bind(this));
+            const checkoutItems = JSON.parse(localStorage.getItem('checkoutItems')) || [];
+            if (checkoutItems.length > 0) {
+                this.message = "Proceed to payment to complete your order.";
+                this.messageType = "yellow";
+                setTimeout(() => { this.message = ""; }, 5000);
+            }
+        },
+    
+        destroy() {
+            window.removeEventListener('storage', this.handleStorageChange);
+        },
+    
+        handleStorageChange(event) {
+            if (event.key === 'cart') {
+                this.cartItems = Alpine.reactive(JSON.parse(event.newValue) || []);
+                this.selectedItems = [];
+                console.log('Cart updated from storage:', this.cartItems);
+            }
+        },
+    
+        toggleEditMode() {
+            this.editMode = !this.editMode;
+            if (!this.editMode) {
+                this.selectedItems = [];
+            }
+        },
+    
+        toggleItemSelection(index) {
+            if (this.selectedItems.includes(index)) {
+                this.selectedItems = this.selectedItems.filter(i => i !== index);
+            } else {
+                this.selectedItems.push(index);
+            }
+        },
+    
+        get totalPrice() {
+            return this.selectedItems.reduce((total, index) => {
+                const item = this.cartItems[index];
+                return total + (item.quantity * item.price);
+            }, 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+    
+        async incrementQuantity(item, retries = 3) {
+            if (item.stock < 1) {
+                this.message = `${item.name} has insufficient stock!`;
+                this.messageType = "red";
+                setTimeout(() => { this.message = ""; }, 3000);
+                return;
+            }
+    
+            while (retries > 0) {
+                try {
+                    const updatedStock = item.stock - 1;
+                    const response = await Alpine.store('api').fetch(`http://172.17.100.14:3332/petilo3/api/products/${item.id}/`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ stock: updatedStock }),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || "Failed to update stock");
+                    }
+    
+                    item.stock = updatedStock;
+                    item.quantity += 1;
+                    localStorage.setItem('cart', JSON.stringify(this.cartItems));
+    
+                    const stockUpdatedEvent = new CustomEvent('stock-updated', {
+                        detail: { productId: item.id, stock: updatedStock },
+                        bubbles: true
+                    });
+                    window.dispatchEvent(stockUpdatedEvent);
+    
+                    this.message = `Increased quantity of ${item.name}!`;
+                    this.messageType = "green";
+                    setTimeout(() => { this.message = ""; }, 3000);
+                    return;
+                } catch (error) {
+                    console.error("Error increasing quantity:", error);
+                    retries--;
+                    if (retries === 0) {
+                        this.message = `Failed to increase quantity: ${error.message}`;
+                        this.messageType = "red";
+                        setTimeout(() => { this.message = ""; }, 5000);
+                    }
+                }
+            }
+        },
+    
+        async decrementQuantity(item, retries = 3) {
+            if (item.quantity <= 1) {
+                this.message = `Cannot reduce quantity below 1 for ${item.name}. Use Remove instead.`;
+                this.messageType = "red";
+                setTimeout(() => { this.message = ""; }, 3000);
+                return;
+            }
+    
+            while (retries > 0) {
+                try {
+                    const updatedStock = item.stock + 1;
+                    const response = await Alpine.store('api').fetch(`http://172.17.100.14:3332/petilo3/api/products/${item.id}/`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ stock: updatedStock }),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || "Failed to update stock");
+                    }
+    
+                    item.stock = updatedStock;
+                    item.quantity -= 1;
+                    localStorage.setItem('cart', JSON.stringify(this.cartItems));
+    
+                    const stockUpdatedEvent = new CustomEvent('stock-updated', {
+                        detail: { productId: item.id, stock: updatedStock },
+                        bubbles: true
+                    });
+                    window.dispatchEvent(stockUpdatedEvent);
+    
+                    this.message = `Decreased quantity of ${item.name}!`;
+                    this.messageType = "green";
+                    setTimeout(() => { this.message = ""; }, 3000);
+                    return;
+                } catch (error) {
+                    console.error("Error decreasing quantity:", error);
+                    retries--;
+                    if (retries === 0) {
+                        this.message = `Failed to decrease quantity: ${error.message}`;
+                        this.messageType = "red";
+                        setTimeout(() => { this.message = ""; }, 5000);
+                    }
+                }
+            }
+        },
+    
+        async removeSelectedItems() {
+            if (this.selectedItems.length === 0) {
+                this.message = "Please select at least one item to remove!";
+                this.messageType = "red";
+                setTimeout(() => { this.message = ""; }, 3000);
+                return;
+            }
+    
+            const originalCart = [...this.cartItems];
+            const itemsToRemove = [...this.selectedItems].sort((a, b) => b - a);
+    
+            try {
+                for (const index of itemsToRemove) {
+                    const item = this.cartItems[index];
+                    const updatedStock = item.stock + item.quantity;
+                    const response = await Alpine.store('api').fetch(`http://172.17.100.14:3332/petilo3/api/products/${item.id}/`, {
+                        method: "PATCH",
+                        body: JSON.stringify({ stock: updatedStock }),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || "Failed to update stock");
+                    }
+    
+                    this.cartItems.splice(index, 1);
+                    const stockUpdatedEvent = new CustomEvent('stock-updated', {
+                        detail: { productId: item.id, stock: updatedStock },
+                        bubbles: true
+                    });
+                    window.dispatchEvent(stockUpdatedEvent);
+                }
+    
+                localStorage.setItem('cart', JSON.stringify(this.cartItems));
+                this.selectedItems = [];
+                this.message = "Selected items removed from cart!";
+                this.messageType = "green";
+                setTimeout(() => {
+                    this.message = "";
+                }, 3000);
+                this.editMode = false;
+            } catch (error) {
+                console.error("Error removing items:", error);
+                this.cartItems = originalCart;
+                localStorage.setItem('cart', JSON.stringify(this.cartItems));
+                this.message = `Failed to remove items: ${error.message}`;
+                this.messageType = "red";
+                setTimeout(() => { this.message = ""; }, 5000);
+            }
+        },
+    
+        proceedToCheckout() {
+            if (this.selectedItems.length === 0) {
+                this.message = "Please select at least one item to proceed!";
+                this.messageType = "red";
+                setTimeout(() => { this.message = ""; }, 3000);
+                return;
+            }
+    
+            const selectedCartItems = this.selectedItems.map(index => this.cartItems[index]);
+            localStorage.setItem('checkoutItems', JSON.stringify(selectedCartItems));
+            navigateTo('products/payment');
+        }
+    }));
+    </script>

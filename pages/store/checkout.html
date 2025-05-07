@@ -1,0 +1,298 @@
+<div class="ui raised segment" style="background: linear-gradient(135deg, #ffe4e6, #fff0f5); border-radius: 15px; box-shadow: 0 6px 12px rgba(255, 182, 193, 0.2); padding: 30px;" x-data="checkoutComponent">
+    <h2 class="ui header" style="color: #4a2e2e; font-family: 'Playfair Display', serif;">
+        <i class="credit card icon" style="color: #ff6f7d;"></i>
+        <div class="content">
+            Checkout Your Cosmetics
+            <div class="sub header" style="color: #555; font-family: 'Lora', serif;">Review and confirm your beauty selections</div>
+        </div>
+    </h2>
+    <div class="ui message" x-show="message" :class="messageType" style="border-radius: 10px; margin: 20px 0; background-color: #ffe6ea; color: #4a2e2e; font-family: 'Lora', serif;">
+        <i class="close icon" @click="message = ''" style="color: #ff6f7d;"></i>
+        <div x-text="message"></div>
+    </div>
+    <div class="cart-grid">
+        <template x-for="(item, index) in cartItems" :key="index">
+            <div class="cart-card">
+                <div class="cart-image">
+                    <img :src="item.product_image || 'https://via.placeholder.com/150?text=Cosmetic'" alt="Product Image" @error="console.log('Checkout image failed to load for ' + item.name + ': ' + item.product_image)">
+                    <div class="out-of-stock-notice" x-show="item.stock <= 0">Out of Stock</div>
+                </div>
+                <div class="cart-details">
+                    <div class="cart-name" x-text="item.name || 'Unknown'" style="color: #c71585;"></div>
+                    <div class="cart-description" x-text="item.description || 'Luxurious cosmetic product.'" style="font-style: italic;"></div>
+                    <div class="cart-price" x-text="`Price: ₱${parseFloat(item.price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`"></div>
+                    <div class="cart-quantity">
+                        Quantity: <span x-text="item.quantity || '0'"></span>
+                    </div>
+                    <div class="cart-total">
+                        Total: <span x-text="`₱${(item.quantity * item.price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`"></span>
+                    </div>
+                </div>
+            </div>
+        </template>
+        <div class="no-items" x-show="!cartItems || cartItems.length === 0" style="font-style: italic; color: #ff69b4; font-family: 'Lora', serif;">
+            Your cosmetic cart is empty
+        </div>
+    </div>
+    <div class="button-group" x-show="cartItems && cartItems.length > 0">
+        <div class="total-price" style="color: #4a2e2e; font-family: 'Lora', serif;">
+            <strong>Total: </strong>
+            <span x-text="`₱${totalPrice}`" style="color: #ff1493; font-weight: bold;"></span>
+        </div>
+        <div class="button-container">
+            <button class="ui button" @click="placeOrder" :disabled="!cartItems || cartItems.length === 0" style="background-color: #ff6f7d; color: white; border-radius: 10px; padding: 14px 25px; font-family: 'Playfair Display', serif;">
+                <i class="credit card icon"></i> Place Order
+            </button>
+            <button class="ui button" @click="navigateTo('products/cart')" style="background-color: #ffe6ea; color: #4a2e2e; border-radius: 10px; padding: 14px 25px; font-family: 'Playfair Display', serif;">
+                <i class="arrow left icon"></i> Back to Cart
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.ui.segment {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 30px;
+    box-sizing: border-box;
+}
+
+.cart-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 30px 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.cart-card {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    max-width: 800px;
+    min-height: 220px;
+    margin: 0 auto;
+    border: 1px solid #ffccd5;
+    border-radius: 20px;
+    background: #fff;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+}
+
+.cart-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 10px 25px rgba(255, 105, 180, 0.2);
+}
+
+.cart-image {
+    position: relative;
+    width: 220px;
+    height: 170px;
+    background: #fef7f9;
+    flex-shrink: 0;
+}
+
+.cart-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 10px;
+}
+
+.out-of-stock-notice {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    background: transparent;
+    color: #dc143c;
+    font-size: 20px;
+    font-weight: bold;
+    padding: 8px 20px;
+    border: 3px solid #dc143c;
+    text-align: center;
+}
+
+.cart-details {
+    padding: 20px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: linear-gradient(to bottom, #fff, #fff8fb);
+}
+
+.cart-name {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #c71585;
+    font-family: 'Arial', sans-serif;
+}
+
+.cart-description {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-clamp: 2;
+    box-orient: vertical;
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 12px;
+    font-style: italic;
+}
+
+.cart-price {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ff1493;
+    margin-bottom: 12px;
+}
+
+.cart-quantity {
+    font-size: 15px;
+    color: #333;
+    font-weight: bold;
+    margin-bottom: 12px;
+}
+
+.cart-total {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+}
+
+.button-group {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    max-width: 800px;
+    margin: 20px auto;
+    gap: 20px;
+}
+
+.total-price {
+    font-size: 18px;
+    font-weight: bold;
+    color: #4a2e2e;
+}
+
+.button-container {
+    display: flex;
+    gap: 15px;
+}
+
+.ui.button {
+    padding: 14px 25px;
+    font-size: 15px;
+    transition: all 0.3s ease;
+}
+
+.ui.button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.no-items {
+    text-align: center;
+    padding: 30px;
+    color: #ff69b4;
+    font-size: 18px;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .cart-card {
+        flex-direction: column;
+        max-width: 100%;
+        min-height: 320px;
+    }
+
+    .cart-image {
+        width: 100%;
+        height: 170px;
+    }
+
+    .button-group {
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    .total-price {
+        align-self: flex-start;
+        margin-bottom: 15px;
+    }
+
+    .button-container {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+</style>
+
+<script>
+Alpine.data("checkoutComponent", () => ({
+    cartItems: Alpine.reactive(JSON.parse(localStorage.getItem('checkoutItems')) || []),
+    message: "",
+    messageType: "",
+
+    init() {
+        console.log('Checkout items loaded:', this.cartItems);
+        window.addEventListener('storage', this.handleStorageChange.bind(this));
+        if (!this.cartItems || this.cartItems.length === 0) {
+            this.message = "No items selected for checkout. Redirecting to cart...";
+            this.messageType = "red";
+            setTimeout(() => {
+                this.message = "";
+                navigateTo('products/cart');
+            }, 2500);
+        }
+    },
+
+    destroy() {
+        window.removeEventListener('storage', this.handleStorageChange);
+    },
+
+    handleStorageChange(event) {
+        if (event.key === 'checkoutItems') {
+            this.cartItems = Alpine.reactive(JSON.parse(event.newValue) || []);
+            console.log('Checkout items updated from storage:', this.cartItems);
+            if (!this.cartItems || this.cartItems.length === 0) {
+                this.message = "Checkout items cleared. Redirecting to cart...";
+                this.messageType = "red";
+                setTimeout(() => {
+                    this.message = "";
+                    navigateTo('products/cart');
+                }, 3000);
+            }
+        }
+    },
+
+    get totalPrice() {
+        return this.cartItems
+            .reduce((total, item) => total + (item.quantity * item.price), 0)
+            .toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    },
+
+    placeOrder() {
+        if (!this.cartItems || this.cartItems.length === 0) {   
+            this.message = "Your cart is empty!";
+            this.messageType = "red";
+            setTimeout(() => { this.message = ""; }, 3000);
+            return;
+        }
+
+        this.message = "Proceeding to payment...";
+        this.messageType = "green";
+        setTimeout(() => {
+            this.message = "";
+            navigateTo('products/payment');
+        }, 2000);
+    }
+}));
+</script>

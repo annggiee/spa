@@ -1,0 +1,125 @@
+<div class="ui raised segment" style="background-color: #f8f9fa; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" x-data="newChatComponent">
+
+    <!-- Display Loading Message -->
+    <div class="ui message" x-show="message" :class="messageType" style="border-radius: 8px; margin-bottom: 20px;">
+        <p x-text="message"></p>
+    </div>
+
+    <h2 class="ui header" style="color: #2c3e50; margin-bottom: 25px;">
+        <i class="comment alternate icon" style="color: #3498db;"></i>
+        <div class="content">
+            New Chat
+            <div class="sub header" style="color: #7f8c8d; margin-top: 5px;">Create a new chat message</div>
+        </div>
+    </h2>
+
+    <form class="ui form">
+        <div class="field">
+            <label style="color: #34495e; font-weight: 600; margin-bottom: 8px;">Username</label>
+            <div class="ui left icon input" style="margin-bottom: 15px;">
+                <input type="text" x-model="newChat.username" required placeholder="Enter your username" style="border-radius: 8px; border: 1px solid #e0e0e0; padding: 12px 15px 12px 40px;">
+                <i class="user icon" style="color: #3498db; opacity: 0.8;"></i>
+            </div>
+        </div>
+
+        <div class="field">
+            <label style="color: #34495e; font-weight: 600; margin-bottom: 8px;">Message</label>
+            <textarea x-model="newChat.chat_message" required placeholder="Type your message here..." rows="4" style="border-radius: 8px; border: 1px solid #e0e0e0; resize: vertical; padding: 12px 15px; margin-bottom: 20px;"></textarea>
+        </div>
+
+        <button class="ui primary button" @click.prevent="sendChat" style="background-color: #3498db; color: white; border-radius: 8px; padding: 12px 20px; font-weight: 600; letter-spacing: 0.5px; transition: all 0.3s ease;">
+            <i class="paper plane icon"></i> Send Message
+        </button>
+    </form>
+</div>
+
+<script>
+    // Initialize a global variable store if it doesn't exist
+    if (!Alpine.store("GlobalVariable")) {
+        Alpine.store("GlobalVariable", {
+            chats: { data: [], total: 0 }
+        });
+    }
+
+    Alpine.data("newChatComponent", () => ({
+        newChat: Alpine.reactive({
+            username: '',
+            chat_message: ''
+        }),
+        message: '',
+        messageType: '',
+
+        sendChat() {
+            // Check if all required fields are filled
+            const isFormValid = Object.values(this.newChat).every(value => value.toString().trim() !== "");
+            
+            if (!isFormValid) {
+                this.message = "Please fill in all required fields.";
+                this.messageType = "red"; // Red for error
+                setTimeout(() => { this.message = ""; }, 3000); // Clear message after 3 seconds
+                return; // Exit early
+            }
+
+            this.message = "Sending...";
+            this.messageType = "yellow"; // Yellow for loading
+
+            // Add current date to the chat data
+            const chatData = {
+                ...this.newChat,
+                date: new Date().toISOString()
+            };
+
+            // Send the chat data to the backend
+            fetch(`${Alpine.store("settings").apiBaseUrl}/chat/`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(chatData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Network response was not ok");
+                }
+                return response.json();
+            })
+            .then(data => {
+                this.message = "Message sent successfully!";
+                this.messageType = "green";  // Green for success
+                
+                // Update local storage to persist username
+                localStorage.setItem('lastUsername', this.newChat.username);
+                
+                // Update the chat list by dispatching a custom event
+                const chatAddedEvent = new CustomEvent('chat-added', { 
+                    detail: { chatData: data || chatData },
+                    bubbles: true
+                });
+                window.dispatchEvent(chatAddedEvent);
+                
+                // Update global store
+                if (Array.isArray(Alpine.store("GlobalVariable").chats.data)) {
+                    Alpine.store("GlobalVariable").chats.data.unshift(data || chatData);
+                    Alpine.store("GlobalVariable").chats.total = Alpine.store("GlobalVariable").chats.data.length;
+                }
+                
+                // Reset message field but keep username
+                this.newChat.chat_message = "";
+                
+                // Clear success message after 3 seconds
+                setTimeout(() => { this.message = ""; }, 3000);
+            })
+            .catch(error => {
+                console.error("Error sending message:", error);
+                this.message = "Error sending message: " + error.message;
+                this.messageType = "red";  // Red for error
+            });
+        },
+        
+        init() {
+            // Restore username from local storage if available
+            const savedUsername = localStorage.getItem('lastUsername');
+            if (savedUsername) {
+                this.newChat.username = savedUsername;
+            }
+        }
+    }));
+</script>
